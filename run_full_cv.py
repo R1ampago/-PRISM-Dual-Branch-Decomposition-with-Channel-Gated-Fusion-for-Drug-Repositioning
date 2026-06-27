@@ -75,12 +75,15 @@ print(f'  {"Dataset":<12s} {"AUC":>18s} {"AUPR":>18s}')
 print(f'  {"─" * 50}')
 
 for ds in DATASETS:
-    aucs = [all_results[f'{ds}_s{s}'][0] for s in SEEDS]
-    auprs = [all_results[f'{ds}_s{s}'][2] for s in SEEDS]
-    print(f'  {ds:<12s} {np.mean(aucs):.4f}±{np.std(aucs):.4f}     '
-          f'{np.mean(auprs):.4f}±{np.std(auprs):.4f}')
+    # Pool all 30 folds (3 seeds x 10 folds) for fold-to-fold std
+    auc_pool = [all_results[f'{ds}_s{s}'][0] for s in SEEDS]
+    aupr_pool = [all_results[f'{ds}_s{s}'][2] for s in SEEDS]
+    auc_fold_std = np.mean([all_results[f'{ds}_s{s}'][1] for s in SEEDS])
+    aupr_fold_std = np.mean([all_results[f'{ds}_s{s}'][3] for s in SEEDS])
+    print(f'  {ds:<12s} {np.mean(auc_pool):.4f}±{auc_fold_std:.4f}     '
+          f'{np.mean(aupr_pool):.4f}±{aupr_fold_std:.4f}')
 
-print(f'\n  {"Per-seed":─^50}')
+print(f'\n  {"Per-seed (fold-to-fold std)":─^50}')
 for ds in DATASETS:
     for s in SEEDS:
         auc_m, auc_s, aupr_m, aupr_s = all_results[f'{ds}_s{s}']
@@ -91,10 +94,12 @@ with open('results/full_cv_results.txt', 'w') as f:
     f.write('PRISM Full CV Results (Comb Selection)\n')
     f.write('=' * 42 + '\n\n')
     for ds in DATASETS:
-        aucs = [all_results[f'{ds}_s{s}'][0] for s in SEEDS]
-        auprs = [all_results[f'{ds}_s{s}'][2] for s in SEEDS]
-        f.write(f'{ds}: AUC={np.mean(aucs):.4f}±{np.std(aucs):.4f}  '
-                f'AUPR={np.mean(auprs):.4f}±{np.std(auprs):.4f}\n')
+        auc_pool = [all_results[f'{ds}_s{s}'][0] for s in SEEDS]
+        aupr_pool = [all_results[f'{ds}_s{s}'][2] for s in SEEDS]
+        auc_fold_std = np.mean([all_results[f'{ds}_s{s}'][1] for s in SEEDS])
+        aupr_fold_std = np.mean([all_results[f'{ds}_s{s}'][3] for s in SEEDS])
+        f.write(f'{ds}: AUC={np.mean(auc_pool):.4f}±{auc_fold_std:.4f}  '
+                f'AUPR={np.mean(aupr_pool):.4f}±{aupr_fold_std:.4f}\n')
     f.write('\nPer-seed:\n')
     for key, (auc_m, auc_s, aupr_m, aupr_s) in all_results.items():
         f.write(f'  {key}: AUC={auc_m:.4f}±{auc_s:.4f} AUPR={aupr_m:.4f}±{aupr_s:.4f}\n')
