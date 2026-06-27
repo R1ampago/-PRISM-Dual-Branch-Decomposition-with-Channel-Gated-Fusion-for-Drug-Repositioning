@@ -11,7 +11,7 @@ from train import train_fold
 DEV = 'cuda:0' if th.cuda.is_available() else 'cpu'
 EPOCHS = 3000; BS = 8192; EVAL_EVERY = 20; NEG_RATIO = 10
 
-DATASETS = ['Fdataset', 'Cdataset', 'Gdataset']
+DATASETS = ['LRSSL', 'Cdataset', 'Gdataset']
 SEEDS = [77, 42, 123]
 
 os.makedirs('results', exist_ok=True)
