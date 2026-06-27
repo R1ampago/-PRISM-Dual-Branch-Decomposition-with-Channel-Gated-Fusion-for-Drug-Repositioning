@@ -1,32 +1,52 @@
 """
-Lightweight data loader for PRISM.
+Lightweight data loader for PRISM — supports .mat, CSV, and TSV formats.
 """
 import numpy as np, scipy.sparse as sp, scipy.io as scio
-import os
+import pandas as pd, os
 from sklearn.model_selection import KFold
 
 class PRISMLoader:
     def __init__(self, name):
         data_dir = f'./drug_data/{name}'
-        d = scio.loadmat(os.path.join(data_dir, f'{name}.mat'))
-        self.A = d['didr'].T  # [N_drug, N_dis]
-        self.drug_sim = d['drug']
-        self.dis_sim = d['disease']
+        if name == 'Ldataset':
+            drug_sim = pd.read_csv(os.path.join(data_dir, 'drug_sim.csv'),
+                                   header=0, index_col=0).values.astype(np.float32)
+            dis_sim  = pd.read_csv(os.path.join(data_dir, 'dis_sim.csv'),
+                                   header=0, index_col=0).values.astype(np.float32)
+            drug_dis = pd.read_csv(os.path.join(data_dir, 'drug_dis.csv'),
+                                   header=0, index_col=0).values.astype(np.int8)
+            self.A = drug_dis  # [N_drug, N_dis]
+            self.drug_sim = drug_sim
+            self.dis_sim = dis_sim
+        elif name == 'LRSSL':
+            drug_sim = pd.read_csv(os.path.join(data_dir, 'drug_sim.txt'),
+                                   sep='\t', header=0, index_col=0).values.astype(np.float32)
+            dis_sim  = pd.read_csv(os.path.join(data_dir, 'dis_sim.txt'),
+                                   sep='\t', header=0, index_col=0).values.astype(np.float32)
+            drug_dis = pd.read_csv(os.path.join(data_dir, 'drug_dis.txt'),
+                                   sep='\t', header=0, index_col=0).values.astype(np.int8)
+            self.A = drug_dis  # [N_drug, N_dis]
+            self.drug_sim = drug_sim
+            self.dis_sim = dis_sim
+        else:
+            d = scio.loadmat(os.path.join(data_dir, f'{name}.mat'))
+            self.A = d['didr'].T  # [N_drug, N_dis]
+            self.drug_sim = d['drug']
+            self.dis_sim = d['disease']
 
         self.n_drug, self.n_dis = self.A.shape
         print(f"  {self.n_drug}x{self.n_dis}, density={self.A.mean()*100:.2f}%")
 
-        # Pre-compute 10-fold CV splits once (instead of re-creating KFold per fold)
+        # Pre-compute 10-fold CV splits
         kf = KFold(n_splits=10, shuffle=True, random_state=1024)
         pos_r, pos_c = np.nonzero(self.A)
         neg_r, neg_c = np.nonzero(1 - self.A)
-        self.pos_splits = list(kf.split(pos_r))   # [(train_idx, test_idx), …]
+        self.pos_splits = list(kf.split(pos_r))
         self.neg_splits = list(kf.split(neg_r))
         self.pos_r, self.pos_c = pos_r, pos_c
         self.neg_r, self.neg_c = neg_r, neg_c
 
     def get_fold(self, cv_idx):
-        """Returns (train_edges, test_edges, test_labels) for fold cv_idx."""
         train_pos_idx, test_pos_idx = self.pos_splits[cv_idx]
         train_neg_idx, test_neg_idx = self.neg_splits[cv_idx]
 
@@ -39,7 +59,6 @@ class PRISMLoader:
         test_d = np.concatenate([td, tnd])
         test_l = np.concatenate([np.ones(len(tr)), np.zeros(len(tnr))])
 
-        # Build train edge_index from train positive edges
         tam = np.zeros_like(self.A)
         tam[pr, pd] = 1
         A_train = sp.csr_matrix(tam)

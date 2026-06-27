@@ -16,7 +16,7 @@ from utils import knn_csr
 def main():
     parser = argparse.ArgumentParser(description='PRISM: Drug Repositioning')
     parser.add_argument('--dataset', type=str, default='Gdataset',
-                        choices=['Fdataset', 'Cdataset', 'Gdataset'])
+                        choices=['LRSSL', 'Ldataset', 'Gdataset', 'Cdataset'])
     parser.add_argument('--folds', type=int, default=10)
     parser.add_argument('--epochs', type=int, default=3000)
     parser.add_argument('--seed', type=int, default=77)

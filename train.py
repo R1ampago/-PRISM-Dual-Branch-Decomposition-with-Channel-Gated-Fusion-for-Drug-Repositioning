@@ -47,8 +47,9 @@ def train_fold(model, fold_data, epochs=3000, batch_size=8192,
 
     for ep in range(1, epochs + 1):
         model.train()
-        # Negative sampling 1:10
-        ni = np.random.choice(len(nr), size=n_pos * neg_ratio, replace=False)
+        # Negative sampling (cap at available negatives if needed)
+        n_neg_sample = min(n_pos * neg_ratio, len(nr))
+        ni = np.random.choice(len(nr), size=n_neg_sample, replace=False)
         br = np.concatenate([pr, nr[ni]])
         bd = np.concatenate([pd, nd[ni]])
         bl = np.concatenate([np.ones(n_pos), np.zeros(n_pos * neg_ratio)])
